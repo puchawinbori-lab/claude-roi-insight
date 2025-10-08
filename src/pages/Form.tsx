@@ -65,7 +65,7 @@ const DataForm = () => {
       navigate("/loading");
 
       // Call backend API to fetch JIRA data
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const API_URL = import.meta.env.VITE_API_URL || 'https://claude-roi-insight-backend.onrender.com';
       const apiEndpoint = `${API_URL}/api/fetch-jira`;
 
       console.log('\n' + '='.repeat(70));
