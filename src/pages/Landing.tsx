@@ -14,7 +14,7 @@ const Landing = () => {
                 Claude Code Live ROI Tracking
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
-                Quantify developer productivity gains and cost savings with data-driven insights
+                Quantify developer productivity gains and cost savings with real time data-driven insights
               </p>
             </div>
 
