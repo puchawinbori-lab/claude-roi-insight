@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Link as LinkIcon, TrendingUp, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import fintechcoLogo from "@/assets/fintechco-logo.png";
+import claudeCodeLogo from "@/assets/claude-code-logo.png";
 
 const Landing = () => {
   return (
@@ -9,14 +11,10 @@ const Landing = () => {
       <nav className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className="w-32 h-10 bg-muted rounded flex items-center justify-center text-sm font-medium">
-              FinTechCo
-            </div>
+            <img src={fintechcoLogo} alt="FinTechCo" className="h-10 w-auto" />
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-32 h-10 bg-muted rounded flex items-center justify-center text-sm font-medium">
-              Claude Code
-            </div>
+            <img src={claudeCodeLogo} alt="Claude Code" className="h-10 w-auto" />
           </div>
         </div>
       </nav>
