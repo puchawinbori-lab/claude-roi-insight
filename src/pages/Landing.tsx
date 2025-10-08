@@ -44,7 +44,7 @@ const Landing = () => {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 mx-auto">
                   <FileCheck className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Prove Value with real-time data</h3>
+                <h3 className="text-lg font-semibold mb-2">Prove Value</h3>
                 <p className="text-muted-foreground">
                   Live Executive-ready ROI metrics and reports
                 </p>
