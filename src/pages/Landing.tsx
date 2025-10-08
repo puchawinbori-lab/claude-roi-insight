@@ -40,7 +40,7 @@ const Landing = () => {
             {/* Feature Cards */}
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mt-12">
               <div className="bg-card rounded-xl p-6 border hover-lift shadow-sm">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 mx-auto">
                   <LinkIcon className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Connect JIRA</h3>
@@ -50,7 +50,7 @@ const Landing = () => {
               </div>
 
               <div className="bg-card rounded-xl p-6 border hover-lift shadow-sm">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 mx-auto">
                   <TrendingUp className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Analyze Impact</h3>
@@ -60,7 +60,7 @@ const Landing = () => {
               </div>
 
               <div className="bg-card rounded-xl p-6 border hover-lift shadow-sm">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 mx-auto">
                   <FileCheck className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Prove Value</h3>
