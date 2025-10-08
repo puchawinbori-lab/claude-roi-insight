@@ -11,7 +11,7 @@ const Landing = () => {
           <div className="text-center space-y-8 animate-fade-in">
             <div className="space-y-4">
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-primary">
-                Claude Code Live ROI Calculator
+                Claude Code Impact Dashboard
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
                 Quantify developer productivity gains and cost savings with real time data-driven insights
