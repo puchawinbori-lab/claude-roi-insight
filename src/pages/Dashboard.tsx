@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, TrendingUp, DollarSign, Clock, Award, AlertCircle, LineChart, BarChart } from "lucide-react";
+import { Download, TrendingUp, DollarSign, Clock, Award, AlertCircle, LineChart, BarChart, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import MetricCard from "@/components/dashboard/MetricCard";
@@ -7,7 +7,6 @@ import ProductivityChart from "@/components/dashboard/ProductivityChart";
 import SavingsChart from "@/components/dashboard/SavingsChart";
 import TasksCompletedChart from "@/components/dashboard/TasksCompletedChart";
 import HoursPerTicketChart from "@/components/dashboard/HoursPerTicketChart";
-import TotalHoursChart from "@/components/dashboard/TotalHoursChart";
 import TotalTicketsChart from "@/components/dashboard/TotalTicketsChart";
 import DataSourceInfo from "@/components/dashboard/DataSourceInfo";
 
@@ -67,6 +66,8 @@ const Dashboard = () => {
   });
 
   const [selectedChart, setSelectedChart] = useState<"savings" | "productivity" | "adoption">("savings");
+  const [isEditingAssumptions, setIsEditingAssumptions] = useState(false);
+  const [customEngineerCost, setCustomEngineerCost] = useState<number | null>(null);
 
   useEffect(() => {
     // Try to load data from sessionStorage
@@ -90,6 +91,65 @@ const Dashboard = () => {
     }
   }, []);
 
+  const recalculateMetrics = (newEngineerCost: number) => {
+    if (!dashboardData) return;
+
+    const HOURS_PER_DAY = 8;
+    const WORKING_DAYS_PER_YEAR = 250;
+    const newHourlyRate = newEngineerCost / (HOURS_PER_DAY * WORKING_DAYS_PER_YEAR);
+
+    // Recalculate costs using new hourly rate
+    const preClaudeAvgCost = dashboardData.summary_metrics.pre_claude.avg_hours_per_task * newHourlyRate;
+    const postClaudeAvgCost = dashboardData.summary_metrics.post_claude.avg_hours_per_task * newHourlyRate;
+    const costSavingsPerTask = preClaudeAvgCost - postClaudeAvgCost;
+    const costSavingsPercent = (costSavingsPerTask / preClaudeAvgCost) * 100;
+
+    // Calculate annual savings estimate
+    const postClaudeDays = dashboardData.summary_metrics.post_claude.total_tasks * dashboardData.summary_metrics.post_claude.avg_days_per_task;
+    const tasksPerDay = dashboardData.summary_metrics.post_claude.total_tasks / postClaudeDays;
+    const annualTasksProjected = tasksPerDay * 365;
+    const annualSavingsEstimate = annualTasksProjected * costSavingsPerTask;
+
+    // Update dashboard data with new calculations
+    const updatedData = {
+      ...dashboardData,
+      summary_metrics: {
+        ...dashboardData.summary_metrics,
+        assumptions: {
+          ...dashboardData.summary_metrics.assumptions,
+          engineer_annual_cost: newEngineerCost,
+          hourly_rate: newHourlyRate,
+        },
+        pre_claude: {
+          ...dashboardData.summary_metrics.pre_claude,
+          avg_cost_per_task: preClaudeAvgCost,
+          total_cost: preClaudeAvgCost * dashboardData.summary_metrics.pre_claude.total_tasks,
+        },
+        post_claude: {
+          ...dashboardData.summary_metrics.post_claude,
+          avg_cost_per_task: postClaudeAvgCost,
+          total_cost: postClaudeAvgCost * dashboardData.summary_metrics.post_claude.total_tasks,
+        },
+        improvements: {
+          ...dashboardData.summary_metrics.improvements,
+          cost_savings_per_task: costSavingsPerTask,
+          cost_savings_percent: costSavingsPercent,
+          annual_savings_estimate: annualSavingsEstimate,
+        },
+      },
+    };
+
+    setDashboardData(updatedData);
+    animateMetrics(updatedData.summary_metrics);
+  };
+
+  const handleSaveAssumptions = () => {
+    if (customEngineerCost && customEngineerCost > 0) {
+      recalculateMetrics(customEngineerCost);
+      setIsEditingAssumptions(false);
+    }
+  };
+
   const animateMetrics = (metrics: SummaryMetrics) => {
     const duration = 2000; // 2 seconds
     const steps = 60;
@@ -99,7 +159,7 @@ const Dashboard = () => {
       timeSavings: metrics.improvements.time_savings_percent,
       hoursSaved: (metrics.pre_claude.avg_hours_per_task - metrics.post_claude.avg_hours_per_task) * metrics.post_claude.total_tasks,
       costSavings: metrics.improvements.cost_savings_per_task * metrics.post_claude.total_tasks,
-      annualSavings: metrics.improvements.annual_savings_estimate,
+      annualSavings: (metrics.improvements.cost_savings_per_task * metrics.post_claude.total_tasks) * 4,
     };
 
     let currentStep = 0;
@@ -185,13 +245,66 @@ const Dashboard = () => {
         {/* Assumptions Card */}
         <Alert className="mb-8">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Cost Assumptions</AlertTitle>
+          <AlertTitle className="flex items-center justify-between">
+            <span>Cost Assumptions</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCustomEngineerCost(summary_metrics.assumptions.engineer_annual_cost);
+                setIsEditingAssumptions(true);
+              }}
+              className="ml-4"
+            >
+              <Edit2 className="h-3 w-3 mr-1" />
+              Edit Assumptions
+            </Button>
+          </AlertTitle>
           <AlertDescription>
             Engineer Cost: ${summary_metrics.assumptions.engineer_annual_cost.toLocaleString()}/year |
             Hourly Rate: ${summary_metrics.assumptions.hourly_rate.toFixed(2)}/hour |
             Hours/Day: {summary_metrics.assumptions.hours_per_day}
           </AlertDescription>
         </Alert>
+
+        {/* Edit Assumptions Modal */}
+        {isEditingAssumptions && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-card border rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+              <h3 className="text-lg font-semibold mb-4">Edit Cost Assumptions</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Annual Engineer Cost ($)
+                  </label>
+                  <input
+                    type="number"
+                    value={customEngineerCost || ''}
+                    onChange={(e) => setCustomEngineerCost(Number(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg bg-background"
+                    placeholder="100000"
+                    min="0"
+                  />
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditingAssumptions(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveAssumptions}
+                    style={{ backgroundColor: '#CC785C' }}
+                    className="text-white hover:opacity-90"
+                  >
+                    Save & Recalculate
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -255,19 +368,13 @@ const Dashboard = () => {
         <div className="mb-8">
           {selectedChart === "savings" && (
             <div className="space-y-6">
+              <SavingsChart
+                timeSeriesData={dashboardData.time_series_data}
+                costSavingsPerTask={summary_metrics.improvements.cost_savings_per_task}
+                claudeAdoptionDate={summary_metrics.claude_adoption_date}
+              />
               <div className="grid md:grid-cols-2 gap-6">
-                <SavingsChart
-                  timeSeriesData={dashboardData.time_series_data}
-                  costSavingsPerTask={summary_metrics.improvements.cost_savings_per_task}
-                  claudeAdoptionDate={summary_metrics.claude_adoption_date}
-                />
                 <HoursPerTicketChart
-                  timeSeriesData={dashboardData.time_series_data}
-                  claudeAdoptionDate={summary_metrics.claude_adoption_date}
-                />
-              </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                <TotalHoursChart
                   timeSeriesData={dashboardData.time_series_data}
                   claudeAdoptionDate={summary_metrics.claude_adoption_date}
                 />
@@ -279,18 +386,87 @@ const Dashboard = () => {
             </div>
           )}
           {selectedChart === "productivity" && (
-            <div className="grid md:grid-cols-2 gap-6">
-              <ProductivityChart
-                preClaudeHours={summary_metrics.pre_claude.avg_hours_per_task}
-                postClaudeHours={summary_metrics.post_claude.avg_hours_per_task}
-              />
-              <TasksCompletedChart
-                preClaudeTotalTasks={summary_metrics.pre_claude.total_tasks}
-                postClaudeTotalTasks={summary_metrics.post_claude.total_tasks}
-                preClaudeDays={summary_metrics.pre_claude.total_tasks * summary_metrics.pre_claude.avg_days_per_task}
-                postClaudeDays={summary_metrics.post_claude.total_tasks * summary_metrics.post_claude.avg_days_per_task}
-              />
-            </div>
+            <>
+              <div className="grid md:grid-cols-2 gap-6">
+                <ProductivityChart
+                  preClaudeHours={summary_metrics.pre_claude.avg_hours_per_task}
+                  postClaudeHours={summary_metrics.post_claude.avg_hours_per_task}
+                />
+                <TasksCompletedChart
+                  preClaudeTotalTasks={summary_metrics.pre_claude.total_tasks}
+                  postClaudeTotalTasks={summary_metrics.post_claude.total_tasks}
+                  preClaudeDays={summary_metrics.pre_claude.total_tasks * summary_metrics.pre_claude.avg_days_per_task}
+                  postClaudeDays={summary_metrics.post_claude.total_tasks * summary_metrics.post_claude.avg_days_per_task}
+                />
+              </div>
+
+              {/* Detailed Metrics for Productivity Comparison */}
+              <div className="grid md:grid-cols-2 gap-6 mt-6">
+                {/* Pre-Claude Period */}
+                <div className="bg-card rounded-2xl border p-6">
+                  <h3 className="text-lg font-semibold mb-4">Pre-Claude Period</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Tasks</span>
+                      <span className="font-semibold">{summary_metrics.pre_claude.total_tasks}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Completed</span>
+                      <span className="font-semibold">
+                        {summary_metrics.pre_claude.completed_tasks} ({summary_metrics.pre_claude.completion_rate.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Avg Days/Task</span>
+                      <span className="font-semibold">{summary_metrics.pre_claude.avg_days_per_task.toFixed(1)} days</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Avg Hours/Task</span>
+                      <span className="font-semibold">{summary_metrics.pre_claude.avg_hours_per_task.toFixed(1)} hours</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Avg Cost/Task</span>
+                      <span className="font-semibold">${summary_metrics.pre_claude.avg_cost_per_task.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Post-Claude Period */}
+                <div className="bg-card rounded-2xl border p-6">
+                  <h3 className="text-lg font-semibold mb-4">Post-Claude Period</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Tasks</span>
+                      <span className="font-semibold">{summary_metrics.post_claude.total_tasks}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Completed</span>
+                      <span className="font-semibold">
+                        {summary_metrics.post_claude.completed_tasks} ({summary_metrics.post_claude.completion_rate.toFixed(1)}%)
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Avg Days/Task</span>
+                      <span className="font-semibold text-green-600">
+                        {summary_metrics.post_claude.avg_days_per_task.toFixed(1)} days
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Avg Hours/Task</span>
+                      <span className="font-semibold text-green-600">
+                        {summary_metrics.post_claude.avg_hours_per_task.toFixed(1)} hours
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Avg Cost/Task</span>
+                      <span className="font-semibold text-green-600">
+                        ${summary_metrics.post_claude.avg_cost_per_task.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
 
