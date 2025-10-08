@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
 import { CalendarIcon, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import fintechLogo from "@/assets/fintechco-logo.png";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -61,16 +62,9 @@ const DataForm = () => {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Navigation */}
       <nav className="border-b bg-background/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-2">
-            <div className="w-32 h-10 bg-muted rounded flex items-center justify-center text-sm font-medium">
-              FinTechCo
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-32 h-10 bg-muted rounded flex items-center justify-center text-sm font-medium">
-              Claude Code
-            </div>
+            <img src={fintechLogo} alt="FinTech Co" className="h-10" />
           </div>
         </div>
       </nav>
