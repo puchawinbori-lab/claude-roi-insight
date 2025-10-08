@@ -1,24 +1,10 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Link as LinkIcon, TrendingUp, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import fintechcoLogo from "@/assets/fintechco-logo.png";
-import claudeLogo from "@/assets/claude-logo.webp";
 
 const Landing = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
-      {/* Navigation */}
-      <nav className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <img src={fintechcoLogo} alt="FinTechCo" className="h-10 w-auto" />
-          </div>
-          <div className="flex items-center gap-2">
-            <img src={claudeLogo} alt="Claude" className="h-10 w-auto" />
-          </div>
-        </div>
-      </nav>
-
       {/* Hero Section */}
       <main className="flex-1 flex items-center justify-center px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-6xl">
