@@ -14,6 +14,21 @@ import traceback
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
 
+# Add request/response logging middleware
+@app.before_request
+def log_request():
+    print(f"\n🔵 [{datetime.now().strftime('%H:%M:%S')}] Incoming {request.method} request to {request.path}")
+    print(f"   Remote addr: {request.remote_addr}")
+    print(f"   Origin: {request.headers.get('Origin', 'N/A')}")
+    if request.is_json:
+        print(f"   Content-Type: {request.headers.get('Content-Type')}")
+
+@app.after_request
+def log_response(response):
+    print(f"🟢 [{datetime.now().strftime('%H:%M:%S')}] Response {response.status}")
+    print(f"   Content-Type: {response.headers.get('Content-Type')}")
+    return response
+
 # Data storage paths
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -245,6 +260,19 @@ def get_projects():
 
 
 if __name__ == '__main__':
-    print("Starting Claude ROI Insight API...")
-    print(f"Data directory: {DATA_DIR}")
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    PORT = int(os.getenv('PORT', 5001))
+    HOST = os.getenv('HOST', '0.0.0.0')
+
+    print("\n" + "="*70)
+    print("🚀 Starting Claude ROI Insight API")
+    print("="*70)
+    print(f"📂 Data directory: {DATA_DIR}")
+    print(f"🌐 Host: {HOST}")
+    print(f"🔌 Port: {PORT}")
+    print(f"🔗 Local URL: http://localhost:{PORT}")
+    print(f"🔗 Network URL: http://{HOST}:{PORT}")
+    print(f"📋 Health check: http://localhost:{PORT}/api/health")
+    print(f"🔧 Environment: {'Development' if app.debug else 'Production'}")
+    print("="*70 + "\n")
+
+    app.run(debug=True, host=HOST, port=PORT)

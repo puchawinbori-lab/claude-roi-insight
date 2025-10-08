@@ -66,26 +66,146 @@ const DataForm = () => {
 
       // Call backend API to fetch JIRA data
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const apiEndpoint = `${API_URL}/api/fetch-jira`;
 
-      const response = await fetch(`${API_URL}/api/fetch-jira`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      console.log('\n' + '='.repeat(70));
+      console.log('🔍 [FORM] FORM SUBMISSION STARTED');
+      console.log('='.repeat(70));
+      console.log('📍 Current location:', window.location.href);
+      console.log('🌍 Environment mode:', import.meta.env.MODE);
+      console.log('🔧 VITE_API_URL env var:', import.meta.env.VITE_API_URL);
+      console.log('🎯 Resolved API_URL:', API_URL);
+      console.log('🚀 Full endpoint:', apiEndpoint);
+      console.log('='.repeat(70));
+
+      // CRITICAL CHECK: Is API URL pointing to localhost in production?
+      if (window.location.hostname !== 'localhost' && apiEndpoint.includes('localhost')) {
+        const errorMsg = `
+⚠️  CONFIGURATION ERROR DETECTED ⚠️
+
+You are running in PRODUCTION (${window.location.hostname})
+But trying to connect to LOCALHOST backend!
+
+Frontend URL: ${window.location.href}
+Backend URL:  ${apiEndpoint}
+
+This will ALWAYS fail because localhost in the browser refers to the user's computer, not your server.
+
+FIX: Set the VITE_API_URL environment variable in your deployment:
+- For Vercel: Project Settings → Environment Variables → Add VITE_API_URL
+- For Netlify: Site Settings → Build & deploy → Environment → Add VITE_API_URL
+- Value should be your backend URL (e.g., https://your-backend.com)
+
+Then rebuild/redeploy your frontend.
+        `;
+        console.error(errorMsg);
+        alert(errorMsg);
+        throw new Error('Cannot connect to localhost from production. See console for details.');
+      }
+
+      console.log('✅ [FORM] API URL validation passed');
+      console.log('🔄 [FORM] Starting fetch request...');
+
+      let response;
+      try {
+        console.log('📤 [FORM] Sending POST request to:', apiEndpoint);
+        console.log('📦 [FORM] Request payload:', {
           jira_url: values.jiraUrl,
           email: values.email,
-          api_token: values.apiKey,
+          api_token: '***' + values.apiKey.slice(-8),
           project_name: values.projectName,
           claude_adoption_date: claudeAdoptionDate
-        }),
-      });
+        });
 
-      const data = await response.json();
+        response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            jira_url: values.jiraUrl,
+            email: values.email,
+            api_token: values.apiKey,
+            project_name: values.projectName,
+            claude_adoption_date: claudeAdoptionDate
+          }),
+        });
+
+        console.log('✅ [FORM] Fetch completed successfully');
+        console.log('📥 [FORM] Response status:', response.status, response.statusText);
+        console.log('📥 [FORM] Response ok:', response.ok);
+        console.log('📥 [FORM] Response headers:', Object.fromEntries(response.headers.entries()));
+
+      } catch (fetchError) {
+        console.error('\n' + '❌'.repeat(35));
+        console.error('❌ [FORM] FETCH FAILED - Network Error');
+        console.error('❌'.repeat(35));
+        console.error('Error object:', fetchError);
+        console.error('Error name:', fetchError instanceof Error ? fetchError.name : 'Unknown');
+        console.error('Error message:', fetchError instanceof Error ? fetchError.message : String(fetchError));
+        console.error('Error type:', fetchError instanceof TypeError ? 'TypeError (NETWORK/CORS ISSUE)' : typeof fetchError);
+
+        // Provide specific guidance based on error
+        let errorGuidance = '\n🔍 TROUBLESHOOTING:\n';
+
+        if (fetchError instanceof TypeError) {
+          errorGuidance += `
+This is a TypeError, which typically means:
+
+1. NETWORK ERROR - Cannot reach the backend server
+   ✓ Is your backend running? Check: ${API_URL}/api/health
+   ✓ Is there a firewall blocking the connection?
+
+2. CORS ERROR - Backend is blocking your frontend's requests
+   ✓ Check backend CORS configuration
+   ✓ Backend must allow origin: ${window.location.origin}
+
+3. WRONG URL - The backend URL is incorrect
+   ✓ Backend URL: ${apiEndpoint}
+   ✓ Try accessing it directly in your browser
+
+To test: Open a new tab and go to ${API_URL}/api/health
+- If it loads: CORS issue (backend needs to allow ${window.location.origin})
+- If it doesn't load: Backend is not accessible from this location
+          `;
+        }
+
+        console.error(errorGuidance);
+
+        throw new Error(`Failed to connect to backend at ${apiEndpoint}
+
+${fetchError instanceof Error ? fetchError.message : 'Unknown error'}
+
+Possible causes:
+- Backend server is not running
+- CORS is blocking the request
+- Incorrect backend URL
+- Network/firewall issue
+
+Check browser console for detailed troubleshooting steps.`);
+      }
+
+      let data;
+      try {
+        const responseText = await response.text();
+        console.log('🔍 [FORM] Raw response text:', responseText.substring(0, 500));
+        data = JSON.parse(responseText);
+        console.log('🔍 [FORM] Parsed response data:', data);
+      } catch (parseError) {
+        console.error('❌ [FORM] Failed to parse JSON response:', parseError);
+        throw new Error('Server returned invalid JSON. Check backend logs.');
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch JIRA data');
+        console.error('❌ [FORM] Server error:', data.error || 'Unknown error');
+        throw new Error(data.error || `Server error: ${response.status} ${response.statusText}`);
       }
+
+      console.log('✅ [FORM] JIRA data fetched successfully');
+      console.log('✅ [FORM] Data summary:', {
+        success: data.success,
+        tasksAnalyzed: data.summary_metrics?.pre_claude?.total_tasks + data.summary_metrics?.post_claude?.total_tasks
+      });
 
       // Store the analysis results
       sessionStorage.setItem("dashboardData", JSON.stringify(data));
@@ -94,8 +214,36 @@ const DataForm = () => {
       navigate("/dashboard");
 
     } catch (error) {
-      console.error("Error fetching JIRA data:", error);
-      alert(`Error: ${error instanceof Error ? error.message : 'Failed to fetch data'}`);
+      console.error('\n' + '🚨'.repeat(35));
+      console.error("🚨 [FORM] FORM SUBMISSION FAILED");
+      console.error('🚨'.repeat(35));
+      console.error("Error object:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+      console.error('🚨'.repeat(35) + '\n');
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch data';
+
+      // Show user-friendly error with action items
+      const userMessage = `
+❌ Form Submission Failed
+
+${errorMessage}
+
+📋 NEXT STEPS:
+1. Open browser DevTools (F12)
+2. Go to Console tab
+3. Look for the detailed error logs above
+4. Screenshot the console output
+5. Check PRODUCTION_TROUBLESHOOTING.md in the repo
+
+Common fixes:
+• Check if backend is running
+• Verify VITE_API_URL is set correctly
+• Ensure CORS is configured on backend
+      `.trim();
+
+      alert(userMessage);
+
       setIsSubmitting(false);
       // Clear any stored form data to prevent error messages from persisting
       sessionStorage.removeItem("formData");
