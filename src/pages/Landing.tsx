@@ -26,8 +26,8 @@ const Landing = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="text-center space-y-8 animate-fade-in">
             <div className="space-y-4">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
-                Measure Productivity Gains and ROI
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight gradient-copper bg-clip-text text-transparent">
+                Claude Code Live ROI Tracking
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
                 Quantify developer productivity gains and cost savings with data-driven insights
