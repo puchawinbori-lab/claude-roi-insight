@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Link as LinkIcon, TrendingUp, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import fintechcoLogo from "@/assets/fintechco-logo.png";
-import claudeCodeLogo from "@/assets/claude-code-logo.png";
+import claudeLogo from "@/assets/claude-logo.webp";
 
 const Landing = () => {
   return (
@@ -14,7 +14,7 @@ const Landing = () => {
             <img src={fintechcoLogo} alt="FinTechCo" className="h-10 w-auto" />
           </div>
           <div className="flex items-center gap-2">
-            <img src={claudeCodeLogo} alt="Claude Code" className="h-10 w-auto" />
+            <img src={claudeLogo} alt="Claude" className="h-10 w-auto" />
           </div>
         </div>
       </nav>
