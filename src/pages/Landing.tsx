@@ -26,7 +26,7 @@ const Landing = () => {
                 </div>
                 <h3 className="text-lg font-semibold mb-2">Connect JIRA</h3>
                 <p className="text-muted-foreground">
-                  integrate your existing project and productivity data seamlessly
+                  Integrate your existing project and productivity data seamlessly
                 </p>
               </div>
 
