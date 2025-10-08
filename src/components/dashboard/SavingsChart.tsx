@@ -18,17 +18,27 @@ const SavingsChart = ({ timeSeriesData, costSavingsPerTask, claudeAdoptionDate }
   // Calculate cumulative savings week by week for Post-Claude period only
   const postClaudeData = timeSeriesData.filter(item => item.Period === 'Post-Claude');
 
-  let cumulativeSavings = 0;
-  const cumulativeData = postClaudeData.map((item, index) => {
-    const weeklySavings = item.Task_Count * costSavingsPerTask;
-    cumulativeSavings += weeklySavings;
+  // Parse the Claude adoption date
+  const adoptionDate = new Date(claudeAdoptionDate);
 
-    return {
-      week: `Week ${index + 1}`,
-      savings: Math.round(cumulativeSavings),
-      taskCount: item.Task_Count
-    };
-  });
+  let cumulativeSavings = 0;
+  const cumulativeData = postClaudeData
+    .slice(0, 5) // Truncate at Week 5
+    .map((item, index) => {
+      const weeklySavings = item.Task_Count * costSavingsPerTask;
+      cumulativeSavings += weeklySavings;
+
+      // Calculate the date for this week (adoption date + index weeks)
+      const weekDate = new Date(adoptionDate);
+      weekDate.setDate(weekDate.getDate() + (index * 7));
+      const formattedDate = `${String(weekDate.getMonth() + 1).padStart(2, '0')}/${String(weekDate.getDate()).padStart(2, '0')}`;
+
+      return {
+        week: `Week ${index + 1} - ${formattedDate}`,
+        savings: Math.round(cumulativeSavings),
+        taskCount: item.Task_Count
+      };
+    });
 
   return (
     <div className="bg-card rounded-xl p-6 border shadow-sm animate-fade-in">

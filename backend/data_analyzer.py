@@ -165,19 +165,30 @@ class ROIAnalyzer:
 
     def get_time_series_data(self) -> List[Dict[str, Any]]:
         """Get time series data for charts"""
-        # Group by week
-        self.df['Week'] = self.df['Created_dt'].dt.to_period('W').astype(str)
+        # Group by week and get the week start date
+        self.df['Week_Period'] = self.df['Created_dt'].dt.to_period('W')
+        self.df['Week_Start'] = self.df['Week_Period'].apply(lambda x: x.start_time.strftime('%Y-%m-%d'))
 
-        weekly_stats = self.df.groupby(['Week', 'Period']).agg({
+        weekly_stats = self.df.groupby(['Week_Start', 'Period']).agg({
             'Hours_per_ticket': 'mean',
             'Duration_days': 'mean',
             'Issue key': 'count',
             'Cost_per_ticket': 'mean'
         }).reset_index()
 
-        weekly_stats.columns = ['Week', 'Period', 'Avg_Hours', 'Avg_Days', 'Task_Count', 'Avg_Cost']
+        weekly_stats.columns = ['Week_Start', 'Period', 'Avg_Hours_Per_Task', 'Avg_Days', 'Task_Count', 'Avg_Cost']
 
-        return weekly_stats.to_dict('records')
+        # Calculate Total_Hours for each week
+        weekly_stats['Total_Hours'] = weekly_stats['Avg_Hours_Per_Task'] * weekly_stats['Task_Count']
+
+        result = weekly_stats.to_dict('records')
+        print(f"\n📊 TIME SERIES DATA ({len(result)} records):")
+        if result:
+            print(f"   First record: {result[0]}")
+            if len(result) > 1:
+                print(f"   Last record: {result[-1]}")
+
+        return result
 
     def get_status_breakdown(self) -> Dict[str, Any]:
         """Get breakdown by status for pre/post Claude"""
