@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
-import { Download, TrendingUp, DollarSign, Clock, Award, AlertCircle } from "lucide-react";
+import { Download, TrendingUp, DollarSign, Clock, Award, AlertCircle, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import MetricCard from "@/components/dashboard/MetricCard";
 import ProductivityChart from "@/components/dashboard/ProductivityChart";
 import SavingsChart from "@/components/dashboard/SavingsChart";
@@ -64,6 +74,9 @@ const Dashboard = () => {
     annualSavings: 0,
   });
 
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [newEngineerCost, setNewEngineerCost] = useState("");
+
   useEffect(() => {
     // Try to load data from sessionStorage
     const storedData = sessionStorage.getItem("dashboardData");
@@ -116,6 +129,54 @@ const Dashboard = () => {
         setAnimatedMetrics(targets);
       }
     }, interval);
+  };
+
+  const recalculateWithNewCost = () => {
+    if (!dashboardData || !newEngineerCost) return;
+
+    const newCost = parseFloat(newEngineerCost);
+    if (isNaN(newCost) || newCost <= 0) {
+      alert("Please enter a valid engineer cost");
+      return;
+    }
+
+    // Recalculate based on new engineer cost
+    const HOURS_PER_DAY = 8;
+    const WORKING_DAYS_PER_YEAR = 250;
+    const newHourlyRate = newCost / (HOURS_PER_DAY * WORKING_DAYS_PER_YEAR);
+
+    // Create updated data with new cost assumptions
+    const updatedData = { ...dashboardData };
+    updatedData.summary_metrics = {
+      ...dashboardData.summary_metrics,
+      assumptions: {
+        engineer_annual_cost: newCost,
+        hours_per_day: HOURS_PER_DAY,
+        hourly_rate: newHourlyRate,
+      },
+      pre_claude: {
+        ...dashboardData.summary_metrics.pre_claude,
+        avg_cost_per_task: dashboardData.summary_metrics.pre_claude.avg_hours_per_task * newHourlyRate,
+        total_cost: dashboardData.summary_metrics.pre_claude.total_tasks * dashboardData.summary_metrics.pre_claude.avg_hours_per_task * newHourlyRate,
+      },
+      post_claude: {
+        ...dashboardData.summary_metrics.post_claude,
+        avg_cost_per_task: dashboardData.summary_metrics.post_claude.avg_hours_per_task * newHourlyRate,
+        total_cost: dashboardData.summary_metrics.post_claude.total_tasks * dashboardData.summary_metrics.post_claude.avg_hours_per_task * newHourlyRate,
+      },
+      improvements: {
+        ...dashboardData.summary_metrics.improvements,
+        cost_savings_per_task: (dashboardData.summary_metrics.pre_claude.avg_hours_per_task - dashboardData.summary_metrics.post_claude.avg_hours_per_task) * newHourlyRate,
+        cost_savings_percent: dashboardData.summary_metrics.improvements.time_savings_percent, // Same as time savings
+        annual_savings_estimate: (dashboardData.summary_metrics.pre_claude.avg_hours_per_task - dashboardData.summary_metrics.post_claude.avg_hours_per_task) * newHourlyRate * (dashboardData.summary_metrics.post_claude.total_tasks / ((new Date(dashboardData.summary_metrics.post_claude.total_tasks).getTime() - new Date(dashboardData.summary_metrics.claude_adoption_date).getTime()) / (1000 * 60 * 60 * 24)) || 1) * 365,
+      }
+    };
+
+    // Update state
+    setDashboardData(updatedData);
+    animateMetrics(updatedData.summary_metrics);
+    setIsEditModalOpen(false);
+    setNewEngineerCost("");
   };
 
   if (loading) {
@@ -182,10 +243,20 @@ const Dashboard = () => {
         <Alert className="mb-8">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Cost Assumptions</AlertTitle>
-          <AlertDescription>
-            Engineer Cost: ${summary_metrics.assumptions.engineer_annual_cost.toLocaleString()}/year |
-            Hourly Rate: ${summary_metrics.assumptions.hourly_rate.toFixed(2)}/hour |
-            Hours/Day: {summary_metrics.assumptions.hours_per_day}
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              Engineer Cost: ${summary_metrics.assumptions.engineer_annual_cost.toLocaleString()}/year |
+              Hourly Rate: ${summary_metrics.assumptions.hourly_rate.toFixed(2)}/hour |
+              Hours/Day: {summary_metrics.assumptions.hours_per_day}
+            </span>
+            <Button
+              size="sm"
+              onClick={() => setIsEditModalOpen(true)}
+              className="ml-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+            >
+              <Edit className="w-3 h-3 mr-2" />
+              Edit Assumptions
+            </Button>
           </AlertDescription>
         </Alert>
 
@@ -197,6 +268,15 @@ const Dashboard = () => {
             trend="up"
             subtitle="Faster task completion"
             icon={TrendingUp}
+            calculation={{
+              formula: "((Pre-Claude Hours - Post-Claude Hours) / Pre-Claude Hours) × 100",
+              explanation: [
+                `Pre-Claude average: ${summary_metrics.pre_claude.avg_hours_per_task.toFixed(1)} hours per task`,
+                `Post-Claude average: ${summary_metrics.post_claude.avg_hours_per_task.toFixed(1)} hours per task`,
+                `Difference: ${(summary_metrics.pre_claude.avg_hours_per_task - summary_metrics.post_claude.avg_hours_per_task).toFixed(1)} hours`,
+                `Percentage saved: ${summary_metrics.improvements.time_savings_percent.toFixed(1)}%`
+              ]
+            }}
           />
           <MetricCard
             title="Hours Saved"
@@ -204,6 +284,15 @@ const Dashboard = () => {
             trend="up"
             subtitle={`Post-Claude: ${summary_metrics.post_claude.avg_hours_per_task.toFixed(1)}h avg`}
             icon={Clock}
+            calculation={{
+              formula: "(Pre-Claude Avg - Post-Claude Avg) × Total Post-Claude Tasks",
+              explanation: [
+                `Hours saved per task: ${(summary_metrics.pre_claude.avg_hours_per_task - summary_metrics.post_claude.avg_hours_per_task).toFixed(1)} hours`,
+                `Total Post-Claude tasks: ${summary_metrics.post_claude.total_tasks}`,
+                `Total hours saved: ${Math.floor((summary_metrics.pre_claude.avg_hours_per_task - summary_metrics.post_claude.avg_hours_per_task) * summary_metrics.post_claude.total_tasks)} hours`,
+                `Assuming ${summary_metrics.assumptions.hours_per_day} hour work days`
+              ]
+            }}
           />
           <MetricCard
             title="Cost Savings"
@@ -211,6 +300,16 @@ const Dashboard = () => {
             trend="up"
             subtitle="In developer productivity"
             icon={DollarSign}
+            calculation={{
+              formula: "Cost Savings Per Task × Total Post-Claude Tasks",
+              explanation: [
+                `Hourly rate: $${summary_metrics.assumptions.hourly_rate.toFixed(2)}/hour`,
+                `Cost savings per task: $${summary_metrics.improvements.cost_savings_per_task.toFixed(2)}`,
+                `Total Post-Claude tasks: ${summary_metrics.post_claude.total_tasks}`,
+                `Total cost savings: $${Math.floor(summary_metrics.improvements.cost_savings_per_task * summary_metrics.post_claude.total_tasks).toLocaleString()}`,
+                `Based on ${summary_metrics.improvements.cost_savings_percent.toFixed(1)}% cost reduction`
+              ]
+            }}
           />
           <MetricCard
             title="Annual Projection"
@@ -218,6 +317,16 @@ const Dashboard = () => {
             trend="up"
             subtitle="Estimated yearly savings"
             icon={Award}
+            calculation={{
+              formula: "Tasks Per Day × 365 Days × Cost Savings Per Task",
+              explanation: [
+                `Cost savings per task: $${summary_metrics.improvements.cost_savings_per_task.toFixed(2)}`,
+                `Based on current completion velocity`,
+                `Projected over 365 days`,
+                `Annual savings estimate: $${summary_metrics.improvements.annual_savings_estimate.toLocaleString()}`,
+                `Assumes consistent task volume and productivity gains`
+              ]
+            }}
           />
         </div>
 
@@ -354,6 +463,53 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
+
+        {/* Edit Assumptions Modal */}
+        <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit Cost Assumptions</DialogTitle>
+              <DialogDescription>
+                Update the engineer annual cost to recalculate all metrics
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="engineer-cost" className="text-right">
+                  Engineer Cost
+                </Label>
+                <Input
+                  id="engineer-cost"
+                  type="number"
+                  placeholder={summary_metrics.assumptions.engineer_annual_cost.toString()}
+                  value={newEngineerCost}
+                  onChange={(e) => setNewEngineerCost(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="text-xs text-muted-foreground ml-auto">
+                Current: ${summary_metrics.assumptions.engineer_annual_cost.toLocaleString()}/year
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setNewEngineerCost("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={recalculateWithNewCost}
+                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+              >
+                Recalculate
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
