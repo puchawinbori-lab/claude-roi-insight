@@ -8,18 +8,23 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const data = [
-  {
-    name: "Pre-Claude",
-    hours: 18.5,
-  },
-  {
-    name: "Post-Claude",
-    hours: 13.2,
-  },
-];
+interface ProductivityChartProps {
+  preClaudeHours: number;
+  postClaudeHours: number;
+}
 
-const ProductivityChart = () => {
+const ProductivityChart = ({ preClaudeHours, postClaudeHours }: ProductivityChartProps) => {
+  const data = [
+    {
+      name: "Pre-Claude",
+      hours: preClaudeHours,
+    },
+    {
+      name: "Post-Claude",
+      hours: postClaudeHours,
+    },
+  ];
+
   return (
     <div className="bg-card rounded-xl p-6 border shadow-sm animate-fade-in">
       <div className="mb-4">

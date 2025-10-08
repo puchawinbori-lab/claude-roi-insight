@@ -8,24 +8,36 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const data = [
-  { month: "Month 1", savings: 12400 },
-  { month: "Month 2", savings: 28900 },
-  { month: "Month 3", savings: 47200 },
-  { month: "Month 4", savings: 64800 },
-  { month: "Month 5", savings: 79300 },
-  { month: "Month 6", savings: 93600 },
-];
+interface SavingsChartProps {
+  timeSeriesData: any[];
+  costSavingsPerTask: number;
+  claudeAdoptionDate: string;
+}
 
-const SavingsChart = () => {
+const SavingsChart = ({ timeSeriesData, costSavingsPerTask, claudeAdoptionDate }: SavingsChartProps) => {
+  // Calculate cumulative savings week by week for Post-Claude period only
+  const postClaudeData = timeSeriesData.filter(item => item.Period === 'Post-Claude');
+
+  let cumulativeSavings = 0;
+  const cumulativeData = postClaudeData.map((item, index) => {
+    const weeklySavings = item.Task_Count * costSavingsPerTask;
+    cumulativeSavings += weeklySavings;
+
+    return {
+      week: `Week ${index + 1}`,
+      savings: Math.round(cumulativeSavings),
+      taskCount: item.Task_Count
+    };
+  });
+
   return (
     <div className="bg-card rounded-xl p-6 border shadow-sm animate-fade-in">
       <div className="mb-4">
         <h3 className="text-lg font-semibold">Cumulative Savings Over Time</h3>
-        <p className="text-sm text-muted-foreground">Total cost savings in USD</p>
+        <p className="text-sm text-muted-foreground">Total cost savings since Claude adoption</p>
       </div>
       <ResponsiveContainer width="100%" height={300}>
-        <AreaChart data={data}>
+        <AreaChart data={cumulativeData}>
           <defs>
             <linearGradient id="savingsGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
@@ -34,7 +46,7 @@ const SavingsChart = () => {
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           <XAxis
-            dataKey="month"
+            dataKey="week"
             stroke="hsl(var(--muted-foreground))"
             fontSize={12}
           />

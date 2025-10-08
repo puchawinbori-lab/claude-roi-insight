@@ -28,6 +28,7 @@ const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   jiraUrl: z.string().url({ message: "Please enter a valid JIRA URL" }),
   apiKey: z.string().min(10, { message: "API key must be at least 10 characters" }),
+  projectName: z.string().min(1, { message: "Project name is required" }),
   launchDate: z.date({ required_error: "Please select when you started using Claude Code" }),
 });
 
@@ -42,19 +43,66 @@ const DataForm = () => {
       email: "",
       jiraUrl: "",
       apiKey: "",
-      launchDate: new Date(new Date().setMonth(new Date().getMonth() - 3)),
+      projectName: "",
+      launchDate: new Date(2025, 7, 25), // August 25th, 2025 (month is 0-indexed)
     },
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
-    // Store form data in session storage for the dashboard
-    sessionStorage.setItem("formData", JSON.stringify(values));
-    
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    
-    navigate("/loading");
+
+    try {
+      // Format the date for the API (YYYY-MM-DD)
+      const claudeAdoptionDate = format(values.launchDate, "yyyy-MM-dd");
+
+      // Store form data in session storage for dashboard refresh
+      sessionStorage.setItem("formData", JSON.stringify({
+        ...values,
+        claudeAdoptionDate
+      }));
+
+      // Navigate to loading screen first
+      navigate("/loading");
+
+      // Call backend API to fetch JIRA data
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+      const response = await fetch(`${API_URL}/api/fetch-jira`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jira_url: values.jiraUrl,
+          email: values.email,
+          api_token: values.apiKey,
+          project_name: values.projectName,
+          claude_adoption_date: claudeAdoptionDate
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch JIRA data');
+      }
+
+      // Store the analysis results
+      sessionStorage.setItem("dashboardData", JSON.stringify(data));
+
+      // Navigate to dashboard
+      navigate("/dashboard");
+
+    } catch (error) {
+      console.error("Error fetching JIRA data:", error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Failed to fetch data'}`);
+      setIsSubmitting(false);
+      // Clear any stored form data to prevent error messages from persisting
+      sessionStorage.removeItem("formData");
+      sessionStorage.removeItem("dashboardData");
+      // Navigate back to form
+      navigate("/form");
+    }
   };
 
   return (
@@ -120,9 +168,24 @@ const DataForm = () => {
                   <FormItem>
                     <FormLabel>JIRA Instance URL</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://fintechco.atlassian.net" {...field} />
+                      <Input placeholder="https://yourcompany.atlassian.net" {...field} />
                     </FormControl>
-                    <FormDescription>Your company's JIRA domain</FormDescription>
+                    <FormDescription>Base URL only (e.g., https://company.atlassian.net)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="projectName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>JIRA Project Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="FinTechCo Backlog" {...field} />
+                    </FormControl>
+                    <FormDescription>The exact project name (use quotes if it has spaces)</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
