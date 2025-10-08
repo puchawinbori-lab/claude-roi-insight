@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, TrendingUp, DollarSign, Clock, Award, AlertCircle, Edit } from "lucide-react";
+import { Download, TrendingUp, DollarSign, Clock, Award, AlertCircle, Edit, ChevronRight, ChevronLeft, BarChart3, LineChart, TrendingUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -76,6 +76,9 @@ const Dashboard = () => {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [newEngineerCost, setNewEngineerCost] = useState("");
+
+  const [isSideNavOpen, setIsSideNavOpen] = useState(false);
+  const [selectedChart, setSelectedChart] = useState<"productivity" | "savings" | "adoption">("productivity");
 
   useEffect(() => {
     // Try to load data from sessionStorage
@@ -228,40 +231,42 @@ const Dashboard = () => {
         </div>
       </nav>
 
-      <div className="container mx-auto px-4 py-8 md:py-12">
-        {/* Header */}
-        <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            Your Claude Code ROI Report
-          </h1>
-          <p className="text-muted-foreground">
-            Based on {summary_metrics.pre_claude.total_tasks + summary_metrics.post_claude.total_tasks} JIRA tasks analyzed
-          </p>
-        </div>
+      {/* Static Header Section - Assumptions + Metric Cards */}
+      <div className="bg-gradient-to-b from-background to-muted/30 border-b shadow-sm">
+        <div className="container mx-auto px-4 py-6">
+          {/* Header */}
+          <div className="mb-4 animate-fade-in">
+            <h1 className="text-2xl md:text-3xl font-bold mb-1">
+              Your Claude Code ROI Report
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Based on {summary_metrics.pre_claude.total_tasks + summary_metrics.post_claude.total_tasks} JIRA tasks analyzed
+            </p>
+          </div>
 
-        {/* Assumptions Card */}
-        <Alert className="mb-8">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Cost Assumptions</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>
-              Engineer Cost: ${summary_metrics.assumptions.engineer_annual_cost.toLocaleString()}/year |
-              Hourly Rate: ${summary_metrics.assumptions.hourly_rate.toFixed(2)}/hour |
-              Hours/Day: {summary_metrics.assumptions.hours_per_day}
-            </span>
-            <Button
-              size="sm"
-              onClick={() => setIsEditModalOpen(true)}
-              className="ml-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
-            >
-              <Edit className="w-3 h-3 mr-2" />
-              Edit Assumptions
-            </Button>
-          </AlertDescription>
-        </Alert>
+          {/* Assumptions Card */}
+          <Alert className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Cost Assumptions</AlertTitle>
+            <AlertDescription className="flex items-center justify-between">
+              <span>
+                Engineer Cost: ${summary_metrics.assumptions.engineer_annual_cost.toLocaleString()}/year |
+                Hourly Rate: ${summary_metrics.assumptions.hourly_rate.toFixed(2)}/hour |
+                Hours/Day: {summary_metrics.assumptions.hours_per_day}
+              </span>
+              <Button
+                size="sm"
+                onClick={() => setIsEditModalOpen(true)}
+                className="ml-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+              >
+                <Edit className="w-3 h-3 mr-2" />
+                Edit Assumptions
+              </Button>
+            </AlertDescription>
+          </Alert>
 
-        {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Key Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="Time Savings"
             value={`${animatedMetrics.timeSavings.toFixed(1)}%`}
@@ -328,19 +333,89 @@ const Dashboard = () => {
               ]
             }}
           />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Wrapper - shifts when nav opens */}
+      <div className={`transition-all duration-300 ${isSideNavOpen ? 'ml-64' : 'ml-0'}`}>
+        {/* Side Navigation */}
+        <div className={`fixed left-0 top-1/2 -translate-y-1/2 z-40 transition-all duration-300 ${
+          isSideNavOpen ? 'translate-x-0' : '-translate-x-56'
+        }`}>
+          <div className="bg-card border-r shadow-lg flex">
+            {/* Navigation Menu */}
+            <div className="w-56">
+              <div className="py-3">
+                <button
+                  onClick={() => setSelectedChart("productivity")}
+                  className={`w-full px-4 py-2.5 flex items-center gap-2 text-left transition-colors ${
+                    selectedChart === "productivity"
+                      ? "bg-orange-50 text-orange-600 border-l-4 border-orange-600"
+                      : "hover:bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="text-sm font-medium">Productivity</span>
+                </button>
+                <button
+                  onClick={() => setSelectedChart("savings")}
+                  className={`w-full px-4 py-2.5 flex items-center gap-2 text-left transition-colors ${
+                    selectedChart === "savings"
+                      ? "bg-orange-50 text-orange-600 border-l-4 border-orange-600"
+                      : "hover:bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <LineChart className="h-4 w-4" />
+                  <span className="text-sm font-medium">Savings</span>
+                </button>
+                <button
+                  onClick={() => setSelectedChart("adoption")}
+                  className={`w-full px-4 py-2.5 flex items-center gap-2 text-left transition-colors ${
+                    selectedChart === "adoption"
+                      ? "bg-orange-50 text-orange-600 border-l-4 border-orange-600"
+                      : "hover:bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <TrendingUpIcon className="h-4 w-4" />
+                  <span className="text-sm font-medium">Adoption</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Toggle Button */}
+            <button
+              onClick={() => setIsSideNavOpen(!isSideNavOpen)}
+              className="w-8 h-16 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 flex items-center justify-center text-white self-center rounded-r-md shadow-md"
+            >
+              {isSideNavOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
 
-        {/* Charts Grid */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <ProductivityChart
-            preClaudeHours={summary_metrics.pre_claude.avg_hours_per_task}
-            postClaudeHours={summary_metrics.post_claude.avg_hours_per_task}
-          />
-          <SavingsChart
-            timeSeriesData={dashboardData.time_series_data}
-            costSavingsPerTask={summary_metrics.improvements.cost_savings_per_task}
-            claudeAdoptionDate={summary_metrics.claude_adoption_date}
-          />
+        {/* Main Content Area */}
+        <div className="container mx-auto px-4 py-8 md:py-12">
+        {/* Chart Display Area */}
+        <div className="mb-8">
+          {selectedChart === "productivity" && (
+            <ProductivityChart
+              preClaudeHours={summary_metrics.pre_claude.avg_hours_per_task}
+              postClaudeHours={summary_metrics.post_claude.avg_hours_per_task}
+            />
+          )}
+          {selectedChart === "savings" && (
+            <SavingsChart
+              timeSeriesData={dashboardData.time_series_data}
+              costSavingsPerTask={summary_metrics.improvements.cost_savings_per_task}
+              claudeAdoptionDate={summary_metrics.claude_adoption_date}
+            />
+          )}
+          {selectedChart === "adoption" && (
+            <AdoptionChart
+              timeSeriesData={dashboardData.time_series_data}
+              costSavingsPerTask={summary_metrics.improvements.cost_savings_per_task}
+            />
+          )}
         </div>
 
         {/* Detailed Metrics */}
@@ -432,14 +507,6 @@ const Dashboard = () => {
           />
         </div>
 
-        {/* Adoption Trend */}
-        <div className="mb-8">
-          <AdoptionChart
-            timeSeriesData={dashboardData.time_series_data}
-            costSavingsPerTask={summary_metrics.improvements.cost_savings_per_task}
-          />
-        </div>
-
         {/* Data Source Info */}
         <div className="mb-8">
           <DataSourceInfo />
@@ -510,6 +577,7 @@ const Dashboard = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </div>
   );
