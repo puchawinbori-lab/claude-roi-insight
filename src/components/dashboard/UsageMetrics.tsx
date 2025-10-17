@@ -161,8 +161,36 @@ const UsageMetrics = () => {
     'Data Analysts': 10
   };
 
-  // Create adoption data with specific counts from requirements
-  const adoptionByOrg = [
+  // Get company from sessionStorage
+  const storedCompany = sessionStorage.getItem('selectedCompany') || 'fintechco';
+
+  // Create adoption data with specific counts based on company
+  const adoptionByOrg = storedCompany === 'pharmaco' ? [
+    {
+      organization: 'Software Engineers',
+      active_users: 8,
+      inactive_users: 17,
+      total_users: 25,
+      label: '8/25',
+      percentage: '30%'
+    },
+    {
+      organization: 'Data Scientists',
+      active_users: 5,
+      inactive_users: 10,
+      total_users: 15,
+      label: '5/15',
+      percentage: '30%'
+    },
+    {
+      organization: 'Data Analysts',
+      active_users: 3,
+      inactive_users: 7,
+      total_users: 10,
+      label: '3/10',
+      percentage: '30%'
+    }
+  ] : [
     {
       organization: 'Software Engineers',
       active_users: 25,

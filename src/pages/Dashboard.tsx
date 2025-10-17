@@ -60,6 +60,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<string>("FinTechCo");
+  const [apiUsageMetrics, setApiUsageMetrics] = useState<any>(null);
 
   const [animatedMetrics, setAnimatedMetrics] = useState({
     timeSavings: 0,
@@ -220,6 +221,27 @@ const Dashboard = () => {
 
   const { summary_metrics } = dashboardData;
 
+  // Company-specific static metrics
+  const companyMetrics = selectedCompany === "FinTechCo" ? {
+    activeUsers: 36,
+    totalSeats: 50,
+    linesOfCode: "7.1M",
+    hoursSaved: 21446,
+    costSavings: "$1,072K",
+    weeksOfData: 5,
+    engagementTrend: "growth" as const,
+    trendPercentage: 0.15
+  } : {
+    activeUsers: 15,
+    totalSeats: 50,
+    linesOfCode: "61K",
+    hoursSaved: 2406,
+    costSavings: "$9K",
+    weeksOfData: 5,
+    engagementTrend: "decline" as const,
+    trendPercentage: -0.10
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Navigation */}
@@ -255,12 +277,12 @@ const Dashboard = () => {
           </div>
           <div className="flex-shrink-0">
             <HealthScore
-              activeUsers={36}
-              totalSeats={50}
-              totalHoursSaved={21446}
-              weeksOfData={5}
-              engagementTrend="growth"
-              trendPercentage={0.15}
+              activeUsers={companyMetrics.activeUsers}
+              totalSeats={companyMetrics.totalSeats}
+              totalHoursSaved={companyMetrics.hoursSaved}
+              weeksOfData={companyMetrics.weeksOfData}
+              engagementTrend={companyMetrics.engagementTrend}
+              trendPercentage={companyMetrics.trendPercentage}
             />
           </div>
         </div>
@@ -329,33 +351,33 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Key Metrics Grid - Same across all tabs */}
+        {/* Key Metrics Grid - Company-specific values */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
             title="Active Users"
-            value="36"
-            trend="up"
+            value={companyMetrics.activeUsers.toString()}
+            trend={companyMetrics.engagementTrend === "growth" ? "up" : "down"}
             subtitle="Total developers using Claude"
             icon={TrendingUp}
           />
           <MetricCard
             title="Lines of Code"
-            value="7.1M"
-            trend="up"
+            value={companyMetrics.linesOfCode}
+            trend={companyMetrics.engagementTrend === "growth" ? "up" : "down"}
             subtitle="Generated since adoption"
             icon={Award}
           />
           <MetricCard
             title="Hours Saved"
-            value="21,446"
-            trend="up"
+            value={companyMetrics.hoursSaved.toLocaleString()}
+            trend={companyMetrics.engagementTrend === "growth" ? "up" : "down"}
             subtitle="Engineering time saved"
             icon={Clock}
           />
           <MetricCard
             title="Cost Savings"
-            value="$1,072K"
-            trend="up"
+            value={companyMetrics.costSavings}
+            trend={companyMetrics.engagementTrend === "growth" ? "up" : "down"}
             subtitle="Total cost savings"
             icon={DollarSign}
           />
