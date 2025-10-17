@@ -43,6 +43,93 @@ def health_check():
     return jsonify({'status': 'healthy', 'message': 'Claude ROI API is running'})
 
 
+@app.route('/api/fetch-demo-data', methods=['POST'])
+def fetch_demo_data():
+    """
+    Fetch static/demo JIRA data (no API call needed)
+
+    Expected JSON body:
+    {
+        "claude_adoption_date": "2025-08-25",
+        "company": "fintechco" or "pharmaco"
+    }
+    """
+    try:
+        data = request.get_json()
+        print("\n" + "="*70)
+        print("📥 RECEIVED REQUEST TO /api/fetch-demo-data")
+        print("="*70)
+
+        # Validate required fields
+        if 'claude_adoption_date' not in data:
+            return jsonify({
+                'error': 'Missing required field: claude_adoption_date'
+            }), 400
+
+        claude_adoption_date = data['claude_adoption_date'].strip()
+        company = data.get('company', 'fintechco').strip().lower()
+
+        print(f"✅ Using Claude Adoption Date: {claude_adoption_date}")
+        print(f"✅ Selected Company: {company}")
+
+        # Select the correct data file based on company
+        if company == 'fintechco':
+            data_filename = 'fintechco_data.csv'
+        elif company == 'pharmaco':
+            data_filename = 'pharmaco_data.csv'
+        else:
+            # Default to fintechco if unknown company
+            data_filename = 'fintechco_data.csv'
+            print(f"⚠️  Unknown company '{company}', defaulting to fintechco")
+
+        DEMO_DATA_PATH = os.path.join(DATA_DIR, data_filename)
+
+        # Check if demo data exists
+        if not os.path.exists(DEMO_DATA_PATH):
+            return jsonify({
+                'error': f'Data file not found: {data_filename}',
+                'expected_path': DEMO_DATA_PATH
+            }), 404
+
+        print(f"📂 Loading data from: {DEMO_DATA_PATH}")
+
+        # Analyze data using the selected CSV
+        analyzer = ROIAnalyzer(DEMO_DATA_PATH, claude_adoption_date)
+
+        # Get metrics
+        summary_metrics = analyzer.get_summary_metrics()
+        time_series_data = analyzer.get_time_series_data()
+        status_breakdown = analyzer.get_status_breakdown()
+        priority_breakdown = analyzer.get_priority_breakdown()
+
+        # Count total issues from CSV
+        import pandas as pd
+        df = pd.read_csv(DEMO_DATA_PATH)
+        total_issues = len(df)
+
+        print(f"✅ Successfully analyzed {total_issues} issues for {company}")
+
+        return jsonify({
+            'success': True,
+            'message': f'Successfully analyzed {total_issues} issues for {company}',
+            'total_issues': total_issues,
+            'company': company,
+            'summary_metrics': summary_metrics,
+            'time_series_data': time_series_data,
+            'status_breakdown': status_breakdown,
+            'priority_breakdown': priority_breakdown,
+            'demo_mode': True
+        })
+
+    except Exception as e:
+        print(f"Error in fetch_demo_data: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'error': str(e),
+            'trace': traceback.format_exc()
+        }), 500
+
+
 @app.route('/api/fetch-jira', methods=['POST'])
 def fetch_jira_data():
     """
@@ -257,6 +344,72 @@ def get_projects():
     except Exception as e:
         print(f"Error in get_projects: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/usage-data', methods=['GET'])
+def get_usage_data():
+    """
+    Get Claude Code API usage data for analytics
+
+    Query parameters:
+    - company: 'fintechco' or 'pharmaco' (required)
+
+    Returns processed usage metrics including:
+    - Time series data (lines of code, commits, PRs)
+    - Organization penetration stats
+    - User leaderboard
+    - Active users trends
+    """
+    try:
+        import json
+
+        # Get company parameter from query string
+        company = request.args.get('company', '').strip().lower()
+
+        if not company:
+            return jsonify({
+                'error': 'Missing required query parameter: company'
+            }), 400
+
+        # Select the correct data file based on company
+        if company == 'fintechco':
+            data_filename = 'fintechco_api_usage_data.json'
+        elif company == 'pharmaco':
+            data_filename = 'pharmaco_api_usage_data.json'
+        else:
+            return jsonify({
+                'error': f'Invalid company: {company}. Must be "fintechco" or "pharmaco"'
+            }), 400
+
+        API_DATA_PATH = os.path.join(DATA_DIR, data_filename)
+
+        if not os.path.exists(API_DATA_PATH):
+            return jsonify({
+                'error': 'API usage data not found',
+                'expected_path': API_DATA_PATH,
+                'company': company
+            }), 404
+
+        print(f"📂 Loading API usage data for {company} from: {API_DATA_PATH}")
+
+        with open(API_DATA_PATH, 'r', encoding='utf-8') as f:
+            usage_data = json.load(f)
+
+        # Return the raw data - frontend will process it
+        return jsonify({
+            'success': True,
+            'company': company,
+            'data': usage_data.get('data', []),
+            'metadata': usage_data.get('metadata', {})
+        })
+
+    except Exception as e:
+        print(f"Error in get_usage_data: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'error': str(e),
+            'trace': traceback.format_exc()
+        }), 500
 
 
 if __name__ == '__main__':

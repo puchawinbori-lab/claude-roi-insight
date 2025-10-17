@@ -1,254 +1,69 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { format } from "date-fns";
-import { CalendarIcon, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Building2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-
-const formSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  jiraUrl: z.string().url({ message: "Please enter a valid JIRA URL" }),
-  apiKey: z.string().min(10, { message: "API key must be at least 10 characters" }),
-  projectName: z.string().min(1, { message: "Project name is required" }),
-  launchDate: z.date({ required_error: "Please select when you started using Claude Code" }),
-});
 
 const DataForm = () => {
   const navigate = useNavigate();
-  const [showApiKey, setShowApiKey] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<string>("fintechco");
+  const [apiToken, setApiToken] = useState<string>("");
+  const [showApiToken, setShowApiToken] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      jiraUrl: "",
-      apiKey: "",
-      projectName: "",
-      launchDate: new Date(2025, 7, 25), // August 25th, 2025 (month is 0-indexed)
-    },
-  });
-
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      // Format the date for the API (YYYY-MM-DD)
-      const claudeAdoptionDate = format(values.launchDate, "yyyy-MM-dd");
-
-      // Store form data in session storage for dashboard refresh
-      sessionStorage.setItem("formData", JSON.stringify({
-        ...values,
-        claudeAdoptionDate
-      }));
+      // Hardcoded launch date: August 25th, 2025
+      const claudeAdoptionDate = "2025-08-25";
 
       // Navigate to loading screen first
       navigate("/loading");
 
-      // Call backend API to fetch JIRA data
-      const API_URL = import.meta.env.VITE_API_URL || 'https://claude-roi-insight-1.onrender.com';
-      const apiEndpoint = `${API_URL}/api/fetch-jira`;
+      // Call backend API for demo data
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+      const apiEndpoint = `${API_URL}/api/fetch-demo-data`;
 
-      console.log('\n' + '='.repeat(70));
-      console.log('🔍 [FORM] FORM SUBMISSION STARTED');
-      console.log('='.repeat(70));
-      console.log('📍 Current location:', window.location.href);
-      console.log('🌍 Environment mode:', import.meta.env.MODE);
-      console.log('🔧 VITE_API_URL env var:', import.meta.env.VITE_API_URL);
-      console.log('🎯 Resolved API_URL:', API_URL);
-      console.log('🚀 Full endpoint:', apiEndpoint);
-      console.log('='.repeat(70));
+      console.log('🔍 [FORM] Fetching demo data for:', selectedCompany);
+      console.log('🚀 Endpoint:', apiEndpoint);
 
-      // CRITICAL CHECK: Is API URL pointing to localhost in production?
-      if (window.location.hostname !== 'localhost' && apiEndpoint.includes('localhost')) {
-        const errorMsg = `
-⚠️  CONFIGURATION ERROR DETECTED ⚠️
-
-You are running in PRODUCTION (${window.location.hostname})
-But trying to connect to LOCALHOST backend!
-
-Frontend URL: ${window.location.href}
-Backend URL:  ${apiEndpoint}
-
-This will ALWAYS fail because localhost in the browser refers to the user's computer, not your server.
-
-FIX: Set the VITE_API_URL environment variable in your deployment:
-- For Vercel: Project Settings → Environment Variables → Add VITE_API_URL
-- For Netlify: Site Settings → Build & deploy → Environment → Add VITE_API_URL
-- Value should be your backend URL (e.g., https://your-backend.com)
-
-Then rebuild/redeploy your frontend.
-        `;
-        console.error(errorMsg);
-        alert(errorMsg);
-        throw new Error('Cannot connect to localhost from production. See console for details.');
-      }
-
-      console.log('✅ [FORM] API URL validation passed');
-      console.log('🔄 [FORM] Starting fetch request...');
-
-      let response;
-      try {
-        console.log('📤 [FORM] Sending POST request to:', apiEndpoint);
-        console.log('📦 [FORM] Request payload:', {
-          jira_url: values.jiraUrl,
-          email: values.email,
-          api_token: '***' + values.apiKey.slice(-8),
-          project_name: values.projectName,
-          claude_adoption_date: claudeAdoptionDate
-        });
-
-        response = await fetch(apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            jira_url: values.jiraUrl,
-            email: values.email,
-            api_token: values.apiKey,
-            project_name: values.projectName,
-            claude_adoption_date: claudeAdoptionDate
-          }),
-        });
-
-        console.log('✅ [FORM] Fetch completed successfully');
-        console.log('📥 [FORM] Response status:', response.status, response.statusText);
-        console.log('📥 [FORM] Response ok:', response.ok);
-        console.log('📥 [FORM] Response headers:', Object.fromEntries(response.headers.entries()));
-
-      } catch (fetchError) {
-        console.error('\n' + '❌'.repeat(35));
-        console.error('❌ [FORM] FETCH FAILED - Network Error');
-        console.error('❌'.repeat(35));
-        console.error('Error object:', fetchError);
-        console.error('Error name:', fetchError instanceof Error ? fetchError.name : 'Unknown');
-        console.error('Error message:', fetchError instanceof Error ? fetchError.message : String(fetchError));
-        console.error('Error type:', fetchError instanceof TypeError ? 'TypeError (NETWORK/CORS ISSUE)' : typeof fetchError);
-
-        // Provide specific guidance based on error
-        let errorGuidance = '\n🔍 TROUBLESHOOTING:\n';
-
-        if (fetchError instanceof TypeError) {
-          errorGuidance += `
-This is a TypeError, which typically means:
-
-1. NETWORK ERROR - Cannot reach the backend server
-   ✓ Is your backend running? Check: ${API_URL}/api/health
-   ✓ Is there a firewall blocking the connection?
-
-2. CORS ERROR - Backend is blocking your frontend's requests
-   ✓ Check backend CORS configuration
-   ✓ Backend must allow origin: ${window.location.origin}
-
-3. WRONG URL - The backend URL is incorrect
-   ✓ Backend URL: ${apiEndpoint}
-   ✓ Try accessing it directly in your browser
-
-To test: Open a new tab and go to ${API_URL}/api/health
-- If it loads: CORS issue (backend needs to allow ${window.location.origin})
-- If it doesn't load: Backend is not accessible from this location
-          `;
-        }
-
-        console.error(errorGuidance);
-
-        throw new Error(`Failed to connect to backend at ${apiEndpoint}
-
-${fetchError instanceof Error ? fetchError.message : 'Unknown error'}
-
-Possible causes:
-- Backend server is not running
-- CORS is blocking the request
-- Incorrect backend URL
-- Network/firewall issue
-
-Check browser console for detailed troubleshooting steps.`);
-      }
-
-      let data;
-      try {
-        const responseText = await response.text();
-        console.log('🔍 [FORM] Raw response text:', responseText.substring(0, 500));
-        data = JSON.parse(responseText);
-        console.log('🔍 [FORM] Parsed response data:', data);
-      } catch (parseError) {
-        console.error('❌ [FORM] Failed to parse JSON response:', parseError);
-        throw new Error('Server returned invalid JSON. Check backend logs.');
-      }
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          claude_adoption_date: claudeAdoptionDate,
+          company: selectedCompany,
+          api_token: apiToken || undefined
+        }),
+      });
 
       if (!response.ok) {
-        console.error('❌ [FORM] Server error:', data.error || 'Unknown error');
-        throw new Error(data.error || `Server error: ${response.status} ${response.statusText}`);
+        throw new Error(`Server error: ${response.status}`);
       }
 
-      console.log('✅ [FORM] JIRA data fetched successfully');
-      console.log('✅ [FORM] Data summary:', {
-        success: data.success,
-        tasksAnalyzed: data.summary_metrics?.pre_claude?.total_tasks + data.summary_metrics?.post_claude?.total_tasks
-      });
+      const data = await response.json();
+      console.log('✅ [FORM] Demo data fetched successfully');
 
       // Store the analysis results
       sessionStorage.setItem("dashboardData", JSON.stringify(data));
+      sessionStorage.setItem("selectedCompany", selectedCompany);
+      if (apiToken) {
+        sessionStorage.setItem("apiToken", apiToken);
+      }
 
       // Navigate to dashboard
       navigate("/dashboard");
 
     } catch (error) {
-      console.error('\n' + '🚨'.repeat(35));
-      console.error("🚨 [FORM] FORM SUBMISSION FAILED");
-      console.error('🚨'.repeat(35));
-      console.error("Error object:", error);
-      console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
-      console.error('🚨'.repeat(35) + '\n');
-
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch data';
-
-      // Show user-friendly error with action items
-      const userMessage = `
-❌ Form Submission Failed
-
-${errorMessage}
-
-📋 NEXT STEPS:
-1. Open browser DevTools (F12)
-2. Go to Console tab
-3. Look for the detailed error logs above
-4. Screenshot the console output
-5. Check PRODUCTION_TROUBLESHOOTING.md in the repo
-
-Common fixes:
-• Check if backend is running
-• Verify VITE_API_URL is set correctly
-• Ensure CORS is configured on backend
-      `.trim();
-
-      alert(userMessage);
-
+      console.error('❌ [FORM] Failed to load demo data:', error);
+      alert('Failed to load demo data. Please check the console for details.');
       setIsSubmitting(false);
-      // Clear any stored form data to prevent error messages from persisting
-      sessionStorage.removeItem("formData");
-      sessionStorage.removeItem("dashboardData");
-      // Navigate back to form
       navigate("/form");
     }
   };
@@ -260,7 +75,7 @@ Common fixes:
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="w-32 h-10 bg-muted rounded flex items-center justify-center text-sm font-medium">
-              FinTechCo
+              {selectedCompany === "fintechco" ? "FinTechCo" : "PharmaCo"}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -287,155 +102,100 @@ Common fixes:
         {/* Form Card */}
         <div className="bg-card rounded-2xl shadow-lg border p-8 md:p-10 animate-fade-in">
           <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">Connect Your Data Sources</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Select Your Company</h1>
             <p className="text-muted-foreground">
-              We'll analyze your JIRA data to calculate productivity gains
+              Choose a company to view their Claude Code ROI analysis
             </p>
           </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Your Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="you@fintechco.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Company Selection */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Company</Label>
+              <RadioGroup
+                value={selectedCompany}
+                onValueChange={setSelectedCompany}
+                className="flex flex-col space-y-2"
+              >
+                <div className="flex items-center space-x-3 space-y-0 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="fintechco" id="fintechco" />
+                  <Label htmlFor="fintechco" className="flex-1 cursor-pointer">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      <span className="font-medium">FinTechCo</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Financial technology company with 50+ developers
+                    </p>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-3 space-y-0 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem value="pharmaco" id="pharmaco" />
+                  <Label htmlFor="pharmaco" className="flex-1 cursor-pointer">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      <span className="font-medium">PharmaCo</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Pharmaceutical research company with 30+ developers
+                    </p>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
 
-              <FormField
-                control={form.control}
-                name="jiraUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>JIRA Instance URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://yourcompany.atlassian.net" {...field} />
-                    </FormControl>
-                    <FormDescription>Base URL only (e.g., https://company.atlassian.net)</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="projectName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>JIRA Project Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="FinTechCo Backlog" {...field} />
-                    </FormControl>
-                    <FormDescription>The exact project name (use quotes if it has spaces)</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="apiKey"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>JIRA API Key</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showApiKey ? "text" : "password"}
-                          placeholder="Enter your API key"
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowApiKey(!showApiKey)}
-                        >
-                          {showApiKey ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormDescription>We'll only use this to read ticket data</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="launchDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>When did you start using Claude Code?</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("2023-01-01")
-                          }
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex gap-4 pt-6">
+            {/* Optional JIRA API Token */}
+            <div className="space-y-3">
+              <Label htmlFor="apiToken" className="text-base font-semibold">
+                JIRA API Token <span className="text-sm text-muted-foreground font-normal">(Optional)</span>
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Enter your JIRA API token to fetch live data, or leave blank to use demo data
+              </p>
+              <div className="relative">
+                <Input
+                  id="apiToken"
+                  type={showApiToken ? "text" : "password"}
+                  placeholder="Enter your JIRA API token (optional)"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
+                  className="pr-10"
+                />
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => navigate("/")}
-                  className="flex-1"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowApiToken(!showApiToken)}
                 >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 gradient-copper hover:opacity-90"
-                >
-                  {isSubmitting ? "Submitting..." : "Analyze Data"}
+                  {showApiToken ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
-            </form>
-          </Form>
+            </div>
+
+            <div className="flex gap-4 pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/")}
+                className="flex-1"
+                disabled={isSubmitting}
+              >
+                Back
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 gradient-copper hover:opacity-90"
+              >
+                {isSubmitting ? "Loading..." : "View ROI Analysis"}
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

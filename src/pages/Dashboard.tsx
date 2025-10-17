@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, TrendingUp, DollarSign, Clock, Award, AlertCircle, LineChart, BarChart, Edit2 } from "lucide-react";
+import { Download, TrendingUp, DollarSign, Clock, Award, AlertCircle, LineChart, BarChart, Edit2, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import MetricCard from "@/components/dashboard/MetricCard";
@@ -9,6 +9,8 @@ import TasksCompletedChart from "@/components/dashboard/TasksCompletedChart";
 import HoursPerTicketChart from "@/components/dashboard/HoursPerTicketChart";
 import TotalTicketsChart from "@/components/dashboard/TotalTicketsChart";
 import DataSourceInfo from "@/components/dashboard/DataSourceInfo";
+import UsageMetrics from "@/components/dashboard/UsageMetrics";
+import HealthScore from "@/components/dashboard/HealthScore";
 
 interface SummaryMetrics {
   assumptions: {
@@ -57,6 +59,7 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<string>("FinTechCo");
 
   const [animatedMetrics, setAnimatedMetrics] = useState({
     timeSavings: 0,
@@ -65,19 +68,27 @@ const Dashboard = () => {
     annualSavings: 0,
   });
 
-  const [selectedChart, setSelectedChart] = useState<"savings" | "productivity" | "adoption">("savings");
+  const [selectedChart, setSelectedChart] = useState<"savings" | "productivity" | "usage">("usage");
   const [isEditingAssumptions, setIsEditingAssumptions] = useState(false);
   const [customEngineerCost, setCustomEngineerCost] = useState<number | null>(null);
+  const [showMetricModal, setShowMetricModal] = useState<string | null>(null);
 
   useEffect(() => {
     // Try to load data from sessionStorage
     const storedData = sessionStorage.getItem("dashboardData");
+    const storedCompany = sessionStorage.getItem("selectedCompany");
 
     if (storedData) {
       try {
         const data: DashboardData = JSON.parse(storedData);
         setDashboardData(data);
         setLoading(false);
+
+        // Set company name
+        if (storedCompany) {
+          const companyName = storedCompany === 'fintechco' ? 'FinTechCo' : 'PharmaCo';
+          setSelectedCompany(companyName);
+        }
 
         // Start animation after data is loaded
         animateMetrics(data.summary_metrics);
@@ -216,7 +227,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="w-32 h-10 bg-muted rounded flex items-center justify-center text-sm font-medium">
-              FinTechCo
+              {selectedCompany}
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -232,14 +243,26 @@ const Dashboard = () => {
       </nav>
 
       <div className="container mx-auto px-4 py-8 md:py-12">
-        {/* Header */}
-        <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            Your Claude Code ROI Report
-          </h1>
-          <p className="text-muted-foreground">
-            Based on {summary_metrics.pre_claude.total_tasks + summary_metrics.post_claude.total_tasks} JIRA tasks analyzed
-          </p>
+        {/* Header with Health Score */}
+        <div className="mb-8 animate-fade-in flex justify-between items-start gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              {selectedCompany} Claude Code ROI Report
+            </h1>
+            <p className="text-muted-foreground">
+              Based on {summary_metrics.pre_claude.total_tasks + summary_metrics.post_claude.total_tasks} JIRA tasks analyzed
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            <HealthScore
+              activeUsers={36}
+              totalSeats={50}
+              totalHoursSaved={21446}
+              weeksOfData={5}
+              engagementTrend="growth"
+              trendPercentage={0.15}
+            />
+          </div>
         </div>
 
         {/* Assumptions Card */}
@@ -306,40 +329,132 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Key Metrics Grid */}
+        {/* Key Metrics Grid - Same across all tabs */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <MetricCard
-            title="Time Savings"
-            value={`${animatedMetrics.timeSavings.toFixed(1)}%`}
+            title="Active Users"
+            value="36"
             trend="up"
-            subtitle="Faster task completion"
+            subtitle="Total developers using Claude"
             icon={TrendingUp}
           />
           <MetricCard
-            title="Hours Saved"
-            value={Math.floor(animatedMetrics.hoursSaved).toLocaleString()}
+            title="Lines of Code"
+            value="7.1M"
             trend="up"
-            subtitle={`Post-Claude: ${summary_metrics.post_claude.avg_hours_per_task.toFixed(1)}h avg`}
+            subtitle="Generated since adoption"
+            icon={Award}
+          />
+          <MetricCard
+            title="Hours Saved"
+            value="21,446"
+            trend="up"
+            subtitle="Engineering time saved"
             icon={Clock}
           />
           <MetricCard
             title="Cost Savings"
-            value={`$${Math.floor(animatedMetrics.costSavings).toLocaleString()}`}
+            value="$1,072K"
             trend="up"
-            subtitle="In developer productivity"
+            subtitle="Total cost savings"
             icon={DollarSign}
-          />
-          <MetricCard
-            title="Annual Projection"
-            value={`$${Math.floor(animatedMetrics.annualSavings).toLocaleString()}`}
-            trend="up"
-            subtitle="Estimated yearly savings"
-            icon={Award}
           />
         </div>
 
+        {/* Metric Explanation Modal */}
+        {showMetricModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowMetricModal(null)}>
+            <div className="bg-card border rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-xl font-semibold mb-4">
+                {showMetricModal === 'timeSavings' && 'Time Savings Calculation'}
+                {showMetricModal === 'hoursSaved' && 'Hours Saved Calculation'}
+                {showMetricModal === 'costSavings' && 'Cost Savings Calculation'}
+                {showMetricModal === 'annualProjection' && 'Annual Projection Calculation'}
+              </h3>
+              <div className="space-y-3 text-sm">
+                {showMetricModal === 'timeSavings' && (
+                  <>
+                    <p className="text-muted-foreground">
+                      Time savings percentage shows how much faster tasks are completed with Claude Code compared to before.
+                    </p>
+                    <div className="bg-muted/50 p-3 rounded-lg font-mono text-xs">
+                      Time Savings % = ((Pre-Claude Hours - Post-Claude Hours) / Pre-Claude Hours) × 100
+                    </div>
+                    <div className="space-y-1">
+                      <p><strong>Pre-Claude Avg:</strong> {summary_metrics.pre_claude.avg_hours_per_task.toFixed(1)} hours/task</p>
+                      <p><strong>Post-Claude Avg:</strong> {summary_metrics.post_claude.avg_hours_per_task.toFixed(1)} hours/task</p>
+                      <p><strong>Result:</strong> {animatedMetrics.timeSavings.toFixed(1)}% time savings</p>
+                    </div>
+                  </>
+                )}
+                {showMetricModal === 'hoursSaved' && (
+                  <>
+                    <p className="text-muted-foreground">
+                      Total engineering hours saved by using Claude Code across all post-adoption tasks.
+                    </p>
+                    <div className="bg-muted/50 p-3 rounded-lg font-mono text-xs">
+                      Hours Saved = (Pre-Claude Avg Hours - Post-Claude Avg Hours) × Post-Claude Task Count
+                    </div>
+                    <div className="space-y-1">
+                      <p><strong>Hour Difference:</strong> {(summary_metrics.pre_claude.avg_hours_per_task - summary_metrics.post_claude.avg_hours_per_task).toFixed(1)} hours/task</p>
+                      <p><strong>Post-Claude Tasks:</strong> {summary_metrics.post_claude.total_tasks} tasks</p>
+                      <p><strong>Result:</strong> {Math.floor(animatedMetrics.hoursSaved).toLocaleString()} hours saved</p>
+                    </div>
+                  </>
+                )}
+                {showMetricModal === 'costSavings' && (
+                  <>
+                    <p className="text-muted-foreground">
+                      Cost savings based on reduced engineering time at the configured hourly rate.
+                    </p>
+                    <div className="bg-muted/50 p-3 rounded-lg font-mono text-xs">
+                      Cost Savings = Hours Saved × Hourly Rate
+                    </div>
+                    <div className="space-y-1">
+                      <p><strong>Hours Saved:</strong> {Math.floor(animatedMetrics.hoursSaved).toLocaleString()} hours</p>
+                      <p><strong>Hourly Rate:</strong> ${summary_metrics.assumptions.hourly_rate.toFixed(2)}/hour</p>
+                      <p><strong>Result:</strong> ${Math.floor(animatedMetrics.costSavings).toLocaleString()} saved</p>
+                    </div>
+                  </>
+                )}
+                {showMetricModal === 'annualProjection' && (
+                  <>
+                    <p className="text-muted-foreground">
+                      Projected annual savings based on current task completion rate and cost savings per task.
+                    </p>
+                    <div className="bg-muted/50 p-3 rounded-lg font-mono text-xs">
+                      Annual Projection = Cost Savings × 4 quarters
+                    </div>
+                    <div className="space-y-1">
+                      <p><strong>Current Period Savings:</strong> ${Math.floor(animatedMetrics.costSavings).toLocaleString()}</p>
+                      <p><strong>Annualized (×4):</strong> ${Math.floor(animatedMetrics.annualSavings).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-2">Note: Assumes consistent task volume throughout the year</p>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="flex justify-end mt-6">
+                <Button onClick={() => setShowMetricModal(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Chart Selector Tabs */}
         <div className="mb-6 flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            onClick={() => setSelectedChart("usage")}
+            className={`px-6 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all ${
+              selectedChart === "usage"
+                ? "bg-[#CC785C] text-white shadow-md"
+                : "bg-card border text-muted-foreground hover:bg-[#CC785C]/10 hover:text-[#CC785C] hover:border-[#CC785C]/30"
+            }`}
+          >
+            <Activity className="h-4 w-4" />
+            <span>Usage Metrics</span>
+          </button>
           <button
             onClick={() => setSelectedChart("savings")}
             className={`px-6 py-3 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all ${
@@ -468,30 +583,14 @@ const Dashboard = () => {
               </div>
             </>
           )}
+          {selectedChart === "usage" && (
+            <UsageMetrics />
+          )}
         </div>
 
         {/* Data Source Info */}
         <div className="mb-8">
           <DataSourceInfo />
-        </div>
-
-        {/* Footer CTA */}
-        <div className="bg-card rounded-2xl border p-8 text-center space-y-4">
-          <h2 className="text-2xl font-semibold">
-            Ready to expand Claude Code usage?
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Based on these results, scaling Claude Code across your organization
-            could deliver even greater productivity gains and cost savings.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Button size="lg" variant="outline">
-              Download Full Report
-            </Button>
-            <Button size="lg" style={{ backgroundColor: '#CC785C' }} className="text-white hover:opacity-90">
-              Contact Sales
-            </Button>
-          </div>
         </div>
       </div>
     </div>
