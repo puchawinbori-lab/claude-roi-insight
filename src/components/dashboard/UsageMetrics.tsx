@@ -287,25 +287,8 @@ const UsageMetrics = () => {
 
   const COLORS = ['#CC785C', '#8B5E3C', '#E89C7C'];
 
-  // Calculate Health Score (same logic as HealthScore component)
-  const totalSeats = 50;
-  const weeksOfData = 5;
-  const hoursSavedWeekly = totalHoursSaved / weeksOfData;
-  const hoursPerSeat = hoursSavedWeekly / totalSeats;
-  const ROI_BENCHMARK = 10;
-  const roiScore = Math.min(40, (hoursPerSeat / ROI_BENCHMARK) * 40);
-  const adoptionRate = uniqueUsers / totalSeats;
-  const adoptionScore = adoptionRate * 35;
-
-  // Determine trend score based on company
-  let trendScore;
-  if (storedCompany === 'pharmaco') {
-    trendScore = 8; // -10% decline
-  } else {
-    trendScore = 20; // +15% growth
-  }
-
-  const healthScore = Math.round(roiScore + adoptionScore + trendScore);
+  // Hardcoded Health Scores for demo purposes
+  const healthScore = storedCompany === 'pharmaco' ? 57 : 85;
 
   // Health score interpretation
   let healthDescription;
@@ -335,7 +318,11 @@ const UsageMetrics = () => {
 
   // Adoption description
   let adoptionDescription;
-  if (averageAdoptionRate === 100) {
+
+  // Special case for PharmaCo - focus on retention instead of expansion
+  if (storedCompany === 'pharmaco') {
+    adoptionDescription = `The client has an average user adoption rate of ${averageAdoptionRate}%, which is relatively low across all organizations. Given the moderate health score, the recommendation is to focus on increasing adoption among existing users and demonstrating value to retain the client, rather than pursuing new expansion opportunities at this time.`;
+  } else if (averageAdoptionRate === 100) {
     adoptionDescription = `The client has achieved 100% user adoption across all organizations, with full engagement from ${highestAdoptionOrg.organization}.`;
   } else if (lowestAdoptionOrg.active_users === 0) {
     adoptionDescription = `The client has an average user adoption rate of ${averageAdoptionRate}%, with most adoption concentrated in ${highestAdoptionOrg.organization} (${Math.round((highestAdoptionOrg.active_users / highestAdoptionOrg.total_users) * 100)}%) and no adoption yet in ${lowestAdoptionOrg.organization}; there is significant potential for expansion.`;
