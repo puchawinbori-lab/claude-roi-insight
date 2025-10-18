@@ -11,10 +11,10 @@ const Landing = () => {
           <div className="text-center space-y-8 animate-fade-in">
             <div className="space-y-4">
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-primary">
-                Claude Code Impact Dashboard
+                Claude Code Customer Health Tracking Dashboard
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
-                Quantify developer productivity gains and cost savings with real time data-driven insights
+                Track customer health using real live data from JIRA and Anthropic Analytics API
               </p>
             </div>
 
@@ -24,9 +24,9 @@ const Landing = () => {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 mx-auto">
                   <LinkIcon className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Connect JIRA</h3>
+                <h3 className="text-lg font-semibold mb-2">Connect Data Sources</h3>
                 <p className="text-muted-foreground">
-                  Integrate your existing project and productivity data seamlessly
+                  Pull live data from JIRA and Anthropic Analytics API for comprehensive insights
                 </p>
               </div>
 
