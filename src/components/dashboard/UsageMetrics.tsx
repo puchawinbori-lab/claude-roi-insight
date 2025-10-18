@@ -287,6 +287,64 @@ const UsageMetrics = () => {
 
   const COLORS = ['#CC785C', '#8B5E3C', '#E89C7C'];
 
+  // Calculate Health Score (same logic as HealthScore component)
+  const totalSeats = 50;
+  const weeksOfData = 5;
+  const hoursSavedWeekly = totalHoursSaved / weeksOfData;
+  const hoursPerSeat = hoursSavedWeekly / totalSeats;
+  const ROI_BENCHMARK = 10;
+  const roiScore = Math.min(40, (hoursPerSeat / ROI_BENCHMARK) * 40);
+  const adoptionRate = uniqueUsers / totalSeats;
+  const adoptionScore = adoptionRate * 35;
+
+  // Determine trend score based on company
+  let trendScore;
+  if (storedCompany === 'pharmaco') {
+    trendScore = 8; // -10% decline
+  } else {
+    trendScore = 20; // +15% growth
+  }
+
+  const healthScore = Math.round(roiScore + adoptionScore + trendScore);
+
+  // Health score interpretation
+  let healthDescription;
+  if (healthScore >= 80) {
+    healthDescription = "The Customer Health Score is " + healthScore + ", which indicates excellent adoption with strong ROI.";
+  } else if (healthScore >= 60) {
+    healthDescription = "The Customer Health Score is " + healthScore + ", which shows solid adoption with room for growth.";
+  } else if (healthScore >= 40) {
+    healthDescription = "The Customer Health Score is " + healthScore + ", which puts them at moderate risk; intervention is recommended.";
+  } else {
+    healthDescription = "The Customer Health Score is " + healthScore + ", which puts them at high risk of churn; immediate action is required.";
+  }
+
+  // Calculate adoption statistics across organizations
+  const totalUsers = adoptionByOrg.reduce((sum, org) => sum + org.total_users, 0);
+  const totalActiveUsers = adoptionByOrg.reduce((sum, org) => sum + org.active_users, 0);
+  const averageAdoptionRate = Math.round((totalActiveUsers / totalUsers) * 100);
+
+  // Find highest and lowest adoption organizations
+  const sortedByAdoption = [...adoptionByOrg].sort((a, b) => {
+    const aRate = a.active_users / a.total_users;
+    const bRate = b.active_users / b.total_users;
+    return bRate - aRate;
+  });
+  const highestAdoptionOrg = sortedByAdoption[0];
+  const lowestAdoptionOrg = sortedByAdoption[sortedByAdoption.length - 1];
+
+  // Adoption description
+  let adoptionDescription;
+  if (averageAdoptionRate === 100) {
+    adoptionDescription = `The client has achieved 100% user adoption across all organizations, with full engagement from ${highestAdoptionOrg.organization}.`;
+  } else if (lowestAdoptionOrg.active_users === 0) {
+    adoptionDescription = `The client has an average user adoption rate of ${averageAdoptionRate}%, with most adoption concentrated in ${highestAdoptionOrg.organization} (${Math.round((highestAdoptionOrg.active_users / highestAdoptionOrg.total_users) * 100)}%) and no adoption yet in ${lowestAdoptionOrg.organization}; there is significant potential for expansion.`;
+  } else if (averageAdoptionRate < 50) {
+    adoptionDescription = `The client has an average user adoption rate of ${averageAdoptionRate}%, with moderate adoption in ${highestAdoptionOrg.organization} (${Math.round((highestAdoptionOrg.active_users / highestAdoptionOrg.total_users) * 100)}%) and limited adoption in ${lowestAdoptionOrg.organization} (${Math.round((lowestAdoptionOrg.active_users / lowestAdoptionOrg.total_users) * 100)}%); there is substantial room for expansion across all teams.`;
+  } else {
+    adoptionDescription = `The client has an average user adoption rate of ${averageAdoptionRate}%, with strong adoption in ${highestAdoptionOrg.organization} (${Math.round((highestAdoptionOrg.active_users / highestAdoptionOrg.total_users) * 100)}%) and moderate adoption in other organizations; there is potential for further expansion in ${lowestAdoptionOrg.organization}.`;
+  }
+
   return (
     <div className="space-y-8">
       {/* Summary Text */}
@@ -297,6 +355,8 @@ const UsageMetrics = () => {
           generating {totalLOC.toLocaleString()} lines of code across {totalCommits.toLocaleString()} commits
           and {totalPRs.toLocaleString()} pull requests. This has resulted in an estimated {Math.round(totalHoursSaved).toLocaleString()} hours
           saved, translating to ${Math.round(totalCostSavings).toLocaleString()} in cost savings.
+          {' '}{healthDescription}
+          {' '}{adoptionDescription}
         </p>
       </div>
 
